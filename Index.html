@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atomic Daily - Life System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Tone.js for satisfying sound feedback -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Google Identity Services Library -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        },
+                        amberAccent: {
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-200">
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-8">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+                    <i class="fa-solid font-bold fa-atom text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight tracking-tight">Atomic Daily</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">1% Better Every Day</p>
+                </div>
+            </div>
+
+            <!-- Identity Pill & Quick Controls -->
+            <div class="flex items-center gap-3">
+                <div id="currentIdentityPill" class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/50 text-xs text-emerald-700 dark:text-emerald-300">
+                    <i class="fa-solid fa-user-astronaut"></i>
+                    <span>Identity: <strong id="identityTextDisplay" class="font-semibold">Building My System...</strong></span>
+                </div>
+
+                <!-- Backup & Restore Buttons for Google Sites Compatibility -->
+                <button id="exportDataBtn" title="Export / Download Backup JSON" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition text-xs font-semibold flex items-center gap-1.5">
+                    <i class="fa-solid fa-download"></i> <span class="hidden sm:inline">Export</span>
+                </button>
+                <label id="importDataLabel" title="Import Backup JSON" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition text-xs font-semibold cursor-pointer flex items-center gap-1.5">
+                    <i class="fa-solid fa-upload"></i> <span class="hidden sm:inline">Import</span>
+                    <input type="file" id="importFileInput" accept=".json" class="hidden">
+                </label>
+
+                <button id="toggleThemeBtn" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+                    <i class="fa-solid fa-moon dark:hidden"></i>
+                    <i class="fa-solid fa-sun hidden dark:inline"></i>
+                </button>
+
+                <button id="reminderAlertBtn" class="relative p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition">
+                    <i class="fa-solid fa-bell"></i>
+                    <span id="reminderBadge" class="hidden absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full animate-pulse"></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+        <!-- Banner / Cue Reminder Notice Box -->
+        <div id="cueReminderBanner" class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-4 sm:p-5 rounded-2xl shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div class="flex items-start gap-3">
+                <div class="p-3 bg-white/10 rounded-xl backdrop-blur">
+                    <i class="fa-solid fa-compass text-2xl text-amber-300"></i>
+                </div>
+                <div>
+                    <h2 class="font-bold text-base sm:text-lg">Daily Anchor: Don't break the chain!</h2>
+                    <p class="text-xs sm:text-sm text-emerald-100 mt-0.5">Focus on <i>showing up</i> for just 2 minutes. Small habits compound exponentially.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button id="quickLogBtn" class="px-4 py-2 bg-white text-emerald-800 font-semibold text-xs sm:text-sm rounded-xl shadow hover:bg-emerald-50 transition flex items-center gap-2">
+                    <i class="fa-solid fa-bolt text-amber-500"></i> Quick Check-In
+                </button>
+            </div>
+        </div>
+
+        <!-- Dashboard Metrics Bar -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm">
+                <div class="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center justify-between">
+                    <span>Active Habits</span>
+                    <i class="fa-solid fa-layer-group text-emerald-500"></i>
+                </div>
+                <div id="metricTotalHabits" class="text-2xl font-bold mt-1">0</div>
+                <div class="text-[11px] text-slate-400 mt-1">Targeting daily consistency</div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm">
+                <div class="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center justify-between">
+                    <span>Today's Completion</span>
+                    <i class="fa-solid fa-chart-line text-teal-500"></i>
+                </div>
+                <div id="metricCompletionRate" class="text-2xl font-bold mt-1">0%</div>
+                <div class="w-full bg-slate-100 dark:bg-slate-700 h-1.5 rounded-full mt-2 overflow-hidden">
+                    <div id="metricProgressBar" class="bg-emerald-500 h-full w-0 transition-all duration-500"></div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm">
+                <div class="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center justify-between">
+                    <span>Current Best Streak</span>
+                    <i class="fa-solid fa-fire text-amber-500"></i>
+                </div>
+                <div id="metricCurrentStreak" class="text-2xl font-bold mt-1">0 Days</div>
+                <div class="text-[11px] text-amber-600 dark:text-amber-400 mt-1 font-medium">Keep momentum alive!</div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm">
+                <div class="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center justify-between">
+                    <span>Identity Votes</span>
+                    <i class="fa-solid fa-award text-purple-500"></i>
+                </div>
+                <div id="metricTotalVotes" class="text-2xl font-bold mt-1">0</div>
+                <div class="text-[11px] text-slate-400 mt-1">Proof of who you are becoming</div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs for The Atomic Framework -->
+        <div class="flex border-b border-slate-200 dark:border-slate-800 overflow-x-auto custom-scrollbar gap-2 sm:gap-6 text-sm font-medium">
+            <button data-tab="habitsTab" class="tab-btn pb-3 px-1 border-b-2 border-emerald-500 text-emerald-600 dark:text-emerald-400 font-semibold whitespace-nowrap flex items-center gap-2">
+                <i class="fa-solid fa-list-check"></i> 1. Habit System & Cues
+            </button>
+            <button data-tab="googleTab" class="tab-btn pb-3 px-1 border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 whitespace-nowrap flex items-center gap-2">
+                <i class="fa-brands fa-google text-blue-500"></i> Calendar & Tasks Sync
+            </button>
+            <button data-tab="stackingTab" class="tab-btn pb-3 px-1 border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 whitespace-nowrap flex items-center gap-2">
+                <i class="fa-solid fa-cubes"></i> 2. Habit Stacking
+            </button>
+            <button data-tab="twoMinTab" class="tab-btn pb-3 px-1 border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 whitespace-nowrap flex items-center gap-2">
+                <i class="fa-solid fa-stopwatch"></i> 3. Two-Minute Starters
+            </button>
+            <button data-tab="identityTab" class="tab-btn pb-3 px-1 border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 whitespace-nowrap flex items-center gap-2">
+                <i class="fa-solid fa-dna"></i> 4. Identity & Reflection
+            </button>
+        </div>
+
+        <!-- TAB CONTENT 1: HABIT SYSTEM (THE 4 LAWS) -->
+        <section id="habitsTab" class="tab-content space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm">
+                <div>
+                    <h3 class="font-bold text-slate-900 dark:text-slate-100">Daily Execution Hub</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Design your environment so cues are obvious and rewards are immediate.</p>
+                </div>
+                <button id="openAddHabitModalBtn" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs sm:text-sm rounded-xl shadow-md transition flex items-center gap-2 self-start sm:self-auto">
+                    <i class="fa-solid fa-plus"></i> Add Atomic Habit
+                </button>
+            </div>
+
+            <!-- Habits Grid Container -->
+            <div id="habitsListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Habit cards will be injected dynamically here -->
+            </div>
+
+            <!-- Empty State Display -->
+            <div id="emptyHabitsState" class="hidden text-center py-12 bg-white dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
+                <div class="w-16 h-16 bg-emerald-100 dark:bg-emerald-950 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i class="fa-solid fa-seedling text-2xl"></i>
+                </div>
+                <h4 class="font-bold text-slate-700 dark:text-slate-200">No Habits Configured Yet</h4>
+                <p class="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto mt-1 mb-4">Start small. Create 1 simple daily habit built around clear time and location implementation intentions.</p>
+                <button onclick="document.getElementById('openAddHabitModalBtn').click()" class="px-4 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-xl">Create First Habit</button>
+            </div>
+        </section>
+
+        <!-- GOOGLE CALENDAR & TASKS INTEGRATION -->
+        <section id="googleTab" class="tab-content hidden space-y-6">
+            <!-- Account & Quick Sync Status Header Card -->
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div class="space-y-1">
+                    <h3 class="font-bold text-base flex items-center gap-2 text-slate-900 dark:text-slate-100">
+                        <i class="fa-regular fa-calendar-check text-blue-500 text-lg"></i> Daily Schedule & Task Hub
+                    </h3>
+                    <p id="userAccountStatusText" class="text-xs text-slate-500 dark:text-slate-400">
+                        Manage your daily schedule and tasks directly in this dashboard to convert them into Atomic Habits.
+                    </p>
+                </div>
+
+                <div class="flex items-center gap-2 w-full md:w-auto flex-wrap">
+                    <button id="googleSignInBtn" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow transition flex items-center gap-2">
+                        <i class="fa-regular fa-user"></i> <span id="signInBtnText">Set Active Profile Tag</span>
+                    </button>
+
+                    <button id="useDemoModeBtn" class="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition flex items-center gap-1.5 shadow">
+                        <i class="fa-solid fa-file-import text-white"></i> Load Sample Schedule & Tasks
+                    </button>
+                </div>
+            </div>
+
+            <!-- EASY USER HELP GUIDE -->
+            <div id="googleHelpBanner" class="p-4 rounded-2xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40 text-xs text-blue-900 dark:text-blue-200 flex items-start gap-3">
+                <i class="fa-solid fa-circle-info text-blue-500 text-lg mt-0.5"></i>
+                <div class="space-y-1">
+                    <p class="font-bold">Google Sites Embed Notice & Usage Guide:</p>
+                    <p class="text-blue-700 dark:text-blue-300">
+                        Due to Google iframe security policies, direct Google SSO authentication is blocked inside embedded frames. You can manually enter your tasks or events below or use the top <strong>"Export / Import"</strong> buttons to backup your complete state on Google Sites.
+                    </p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Daily Schedule / Calendar Block -->
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
+                        <h4 class="font-bold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                            <i class="fa-regular fa-calendar-days text-blue-500"></i> Daily Schedule & Events
+                        </h4>
+                        <span id="calendarCountBadge" class="text-[10px] font-bold bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full">0 Events</span>
+                    </div>
+
+                    <!-- Add New Calendar Event Form -->
+                    <form id="addCalendarEventForm" class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <input type="text" id="newEventSummary" placeholder="Event (e.g. Read Chapter 1)" required class="sm:col-span-2 px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 outline-none">
+                        <div class="flex gap-2">
+                            <input type="text" id="newEventTime" placeholder="Time (e.g. 9:00 AM)" required class="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 outline-none">
+                            <button type="submit" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition">Add</button>
+                        </div>
+                    </form>
+
+                    <div id="calendarEventsContainer" class="space-y-3 max-h-80 overflow-y-auto custom-scrollbar pr-1">
+                        <!-- Dynamic Calendar Events -->
+                    </div>
+                </div>
+
+                <!-- Daily Tasks Block -->
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
+                        <h4 class="font-bold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-emerald-500"></i> Tasks List
+                        </h4>
+                        <span id="tasksCountBadge" class="text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full">0 Tasks</span>
+                    </div>
+
+                    <!-- Quick Add Task -->
+                    <form id="addGoogleTaskForm" class="flex gap-2">
+                        <input type="text" id="newGoogleTaskTitle" placeholder="Add a new task..." required class="flex-1 px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 outline-none">
+                        <button type="submit" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl">Add Task</button>
+                    </form>
+
+                    <div id="googleTasksContainer" class="space-y-2 max-h-72 overflow-y-auto custom-scrollbar pr-1">
+                        <!-- Dynamic Tasks -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB CONTENT 2: HABIT STACKING -->
+        <section id="stackingTab" class="tab-content hidden space-y-6">
+            <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm space-y-4">
+                <div>
+                    <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Formula: After [CURRENT HABIT], I will [NEW HABIT]</span>
+                    <h3 class="text-lg font-bold text-slate-900 dark:text-slate-100 mt-1">Habit Stacking Builder</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">One of the best ways to build a new habit is to identify a current habit you already do each day and stack your new behavior on top.</p>
+                </div>
+
+                <form id="stackForm" class="space-y-4 pt-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">After I... (Current Established Cue)</label>
+                            <input type="text" id="stackAnchor" placeholder="e.g. Pour my morning coffee / Close my laptop at 5 PM" required class="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">I will... (New Atomic Habit)</label>
+                            <input type="text" id="stackNewAction" placeholder="e.g. Write down 1 top priority task / Do 5 pushups" required class="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Location / Context</label>
+                            <input type="text" id="stackLocation" placeholder="e.g. Kitchen counter / Office desk" class="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Temptation Reward (Optional)</label>
+                            <input type="text" id="stackReward" placeholder="e.g. Sip favorite tea / Check social media 2 mins" class="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-xl shadow transition flex items-center gap-2">
+                        <i class="fa-solid fa-link"></i> Save Habit Stack Rule
+                    </button>
+                </form>
+            </div>
+
+            <!-- Existing Stacks List -->
+            <div class="space-y-3">
+                <h4 class="font-bold text-sm text-slate-700 dark:text-slate-300">Your Active Habit Stacks</h4>
+                <div id="stackListContainer" class="space-y-3">
+                    <!-- Dynamic stack rules -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB CONTENT 3: THE TWO-MINUTE RULE -->
+        <section id="twoMinTab" class="tab-content hidden space-y-6">
+            <div class="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 p-6 rounded-2xl space-y-3">
+                <div class="flex items-center gap-3 text-amber-600 dark:text-amber-400">
+                    <i class="fa-solid fa-stopwatch text-2xl"></i>
+                    <h3 class="text-lg font-bold">The 2-Minute Rule Engine</h3>
+                </div>
+                <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+                    When you start a new habit, it should take less than two minutes to do. "Read before bed each night" becomes "Read one page." "Fold the laundry" becomes "Fold one pair of socks."
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Friction & Shrink Tool -->
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm space-y-4">
+                    <h4 class="font-bold text-sm text-slate-800 dark:text-slate-200">Deconstruct Overwhelming Tasks</h4>
+                    <p class="text-xs text-slate-500">Break down big goals you're procrastinating on into tiny gateway steps.</p>
+                    
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Intimidating Goal</label>
+                            <input type="text" id="deconstructBigGoal" placeholder="e.g. Write 5000 word report / Workout 1 hour" class="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Gateway 2-Minute Starter Step</label>
+                            <input type="text" id="deconstructStarter" placeholder="e.g. Open document & write 1 sentence / Put on running shoes" class="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 outline-none">
+                        </div>
+                        <button id="addDeconstructedBtn" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-xl shadow transition">
+                            Add Gateway Starter
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Active 2-Minute Starters list -->
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm space-y-4">
+                    <h4 class="font-bold text-sm text-slate-800 dark:text-slate-200">Current Gateway Starters</h4>
+                    <div id="startersListContainer" class="space-y-2">
+                        <!-- Dynamic Starters -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB CONTENT 4: IDENTITY & REFLECTION -->
+        <section id="identityTab" class="tab-content hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Identity Declaration -->
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm space-y-4 lg:col-span-1">
+                    <div class="flex items-center gap-2 text-purple-600 dark:text-purple-400 font-bold">
+                        <i class="fa-solid fa-fingerprint text-lg"></i>
+                        <h3>Identity Anchor</h3>
+                    </div>
+                    <p class="text-xs text-slate-500">True behavior change is identity change. You do not just perform a habit; you become a person who does it.</p>
+                    
+                    <form id="identityForm" class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Desired Identity Statement</label>
+                            <input type="text" id="identityInput" placeholder="e.g. I am an organized, proactive writer" required class="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 outline-none">
+                        </div>
+                        <button type="submit" class="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs rounded-xl transition">
+                            Update Identity
+                        </button>
+                    </form>
+
+                    <div class="p-4 bg-purple-50 dark:bg-purple-950/30 rounded-xl border border-purple-200 dark:border-purple-800/40">
+                        <span class="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Current Focus</span>
+                        <p id="identityPrimaryDisplay" class="text-sm font-semibold text-purple-900 dark:text-purple-200 mt-1">Not Set Yet</p>
+                    </div>
+                </div>
+
+                <!-- Daily Evening Reflection Portal -->
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm space-y-4 lg:col-span-2">
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-journal-whills text-emerald-500"></i> Daily Atomic Reflection
+                        </h3>
+                        <span id="reflectionDateTag" class="text-xs font-semibold bg-slate-100 dark:bg-slate-700 px-2.5 py-1 rounded-lg"></span>
+                    </div>
+
+                    <form id="reflectionForm" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">1. What went well today? (Small Wins)</label>
+                            <textarea id="refWin" rows="2" placeholder="I completed my morning routine, logged friction..." class="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 outline-none"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">2. Where did friction occur? How can I lower friction tomorrow?</label>
+                            <textarea id="refFriction" rows="2" placeholder="Felt tired at 3 PM. Tomorrow I will place workout clothes near my desk..." class="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 outline-none"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">3. Today's Identity Vote</label>
+                            <input type="text" id="refVote" placeholder="e.g. Showed up for 5 mins writing even when busy" class="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 outline-none">
+                        </div>
+
+                        <button type="submit" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-xl shadow transition">
+                            Save Daily Reflection Log
+                        </button>
+                    </form>
+
+                    <!-- Previous Reflection Logs -->
+                    <div class="pt-4 border-t border-slate-200 dark:border-slate-700 space-y-3">
+                        <h4 class="font-bold text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wider">Past Log Entries</h4>
+                        <div id="reflectionLogsContainer" class="space-y-3 max-h-60 overflow-y-auto custom-scrollbar pr-2">
+                            <!-- Injected entries -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal: Add / Edit Habit -->
+    <div id="habitModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-5 animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                    <i class="fa-solid fa-atom text-emerald-500"></i>
+                    <span id="modalTitle">Create Atomic Habit</span>
+                </h3>
+                <button id="closeModalBtn" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="habitForm" class="space-y-4">
+                <input type="hidden" id="habitId">
+                
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Habit Title *</label>
+                    <input type="text" id="habitTitle" placeholder="e.g. Read Non-fiction" required class="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none">
+                </div>
+
+                <!-- Law 1: Implementation Intention -->
+                <div class="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-xl border border-emerald-200/50 dark:border-emerald-800/30 space-y-2">
+                    <span class="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">1st Law: Make It Obvious (When & Where)</span>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[11px] text-slate-600 dark:text-slate-400 mb-1">Time / Cue</label>
+                            <input type="text" id="habitTime" placeholder="e.g. At 8:00 AM / After Breakfast" required class="w-full px-2.5 py-1.5 text-xs rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-600 dark:text-slate-400 mb-1">Location</label>
+                            <input type="text" id="habitLocation" placeholder="e.g. Living Room Couch" required class="w-full px-2.5 py-1.5 text-xs rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Law 3: Make it Easy (2-min version) -->
+                <div class="p-3 bg-amber-50/50 dark:bg-amber-950/20 rounded-xl border border-amber-200/50 dark:border-amber-800/30 space-y-2">
+                    <span class="text-[11px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wide">3rd Law: Make It Easy (2-Min Starter)</span>
+                    <input type="text" id="habitTwoMin" placeholder="e.g. Read just 1 page" required class="w-full px-2.5 py-1.5 text-xs rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 outline-none">
+                </div>
+
+                <!-- Law 2: Make it Attractive -->
+                <div class="p-3 bg-purple-50/50 dark:bg-purple-950/20 rounded-xl border border-purple-200/50 dark:border-purple-800/30 space-y-2">
+                    <span class="text-[11px] font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wide">2nd Law: Make It Attractive (Reward)</span>
+                    <input type="text" id="habitReward" placeholder="e.g. Enjoy a warm cup of matcha afterwards" class="w-full px-2.5 py-1.5 text-xs rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Target Identity Supported</label>
+                    <input type="text" id="habitIdentity" placeholder="e.g. An avid learner / A fit athlete" class="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 outline-none">
+                </div>
+
+                <div class="pt-2 flex gap-3">
+                    <button type="button" id="cancelModalBtn" class="w-1/2 py-2.5 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-xl">Cancel</button>
+                    <button type="submit" class="w-1/2 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow transition">Save Habit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Quick Reminder Panel Drawer -->
+    <div id="reminderDrawer" class="fixed bottom-4 right-4 w-80 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-4 space-y-3 z-40 hidden transition-all">
+        <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-2">
+            <h4 class="font-bold text-xs flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                <i class="fa-solid fa-bell"></i> Gentle Cues & Reminders
+            </h4>
+            <button id="closeReminderBtn" class="text-xs text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div id="reminderContent" class="text-xs space-y-2 text-slate-600 dark:text-slate-300">
+            <!-- Dynamic notifications -->
+        </div>
+    </div>
+
+    <!-- Application Logic Script -->
+    <script>
+        // --- DATA STRUCTURE & INITIAL STATE ---
+        const DEFAULT_HABITS = [
+            {
+                id: '1',
+                title: 'Morning Water Hydration',
+                time: '7:30 AM (Right after waking up)',
+                location: 'Kitchen',
+                twoMin: 'Drink 1 full glass of water',
+                reward: 'Feel refreshed & energised',
+                identity: 'A healthy & hydrated person',
+                completedDates: [],
+                streak: 0
+            },
+            {
+                id: '2',
+                title: 'Focused Writing / Journaling',
+                time: '8:30 AM',
+                location: 'Desk',
+                twoMin: 'Write 1 sentence or key bullet point',
+                reward: 'Listen to 1 favorite song',
+                identity: 'An organized, intentional thinker',
+                completedDates: [],
+                streak: 0
+            }
+        ];
+
+        // SAMPLE SCHEDULE & TASKS DATA
+        const DEMO_EVENTS = [
+            { id: 'e1', summary: 'Morning Deep Work Session', start: '09:00 AM', location: 'Home Desk', description: 'Review key priorities' },
+            { id: 'e2', summary: 'Daily Exercise & Cardio', start: '05:00 PM', location: 'Living Room / Gym', description: '20 mins movement' },
+            { id: 'e3', summary: 'Evening Reading Routine', start: '09:30 PM', location: 'Bedside Couch', description: 'Read 1 chapter' }
+        ];
+
+        const DEMO_TASKS = [
+            { id: 't1', title: 'Clear email inbox to zero', status: 'needsAction' },
+            { id: 't2', title: 'Prepare clothes for tomorrow', status: 'needsAction' },
+            { id: 't3', title: 'Organize desk surface', status: 'completed' }
+        ];
+
+        let state = {
+            habits: JSON.parse(localStorage.getItem('atomic_habits')) || DEFAULT_HABITS,
+            stacks: JSON.parse(localStorage.getItem('atomic_stacks')) || [],
+            starters: JSON.parse(localStorage.getItem('atomic_starters')) || [],
+            identity: localStorage.getItem('atomic_identity') || 'An organized & intentional individual',
+            reflections: JSON.parse(localStorage.getItem('atomic_reflections')) || [],
+            userEmail: localStorage.getItem('atomic_user_email') || null,
+            googleEvents: JSON.parse(localStorage.getItem('atomic_google_events')) || DEMO_EVENTS,
+            googleTasks: JSON.parse(localStorage.getItem('atomic_google_tasks')) || DEMO_TASKS
+        };
+
+        // --- SOUND EFFECTS USING TONE.JS ---
+        function playSuccessSound() {
+            try {
+                const synth = new Tone.Synth().toDestination();
+                synth.triggerAttackRelease("C5", "8n");
+                setTimeout(() => synth.triggerAttackRelease("E5", "8n"), 100);
+            } catch (e) {
+                console.log("Audio feedback initialized after gesture");
+            }
+        }
+
+        // --- UTILITY FUNCTIONS ---
+        function getTodayString() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        function saveData() {
+            localStorage.setItem('atomic_habits', JSON.stringify(state.habits));
+            localStorage.setItem('atomic_stacks', JSON.stringify(state.stacks));
+            localStorage.setItem('atomic_starters', JSON.stringify(state.starters));
+            localStorage.setItem('atomic_identity', state.identity);
+            localStorage.setItem('atomic_reflections', JSON.stringify(state.reflections));
+            if (state.userEmail) {
+                localStorage.setItem('atomic_user_email', state.userEmail);
+            } else {
+                localStorage.removeItem('atomic_user_email');
+            }
+            localStorage.setItem('atomic_google_events', JSON.stringify(state.googleEvents));
+            localStorage.setItem('atomic_google_tasks', JSON.stringify(state.googleTasks));
+            renderAll();
+        }
+
+        // Calculate streaks & completion metrics
+        function calculateMetrics() {
+            const today = getTodayString();
+            let total = state.habits.length;
+            let completedToday = 0;
+            let maxStreak = 0;
+            let totalVotes = 0;
+
+            state.habits.forEach(h => {
+                if (h.completedDates.includes(today)) {
+                    completedToday++;
+                }
+                totalVotes += h.completedDates.length;
+                if (h.streak > maxStreak) maxStreak = h.streak;
+            });
+
+            const completionRate = total > 0 ? Math.round((completedToday / total) * 100) : 0;
+
+            document.getElementById('metricTotalHabits').innerText = total;
+            document.getElementById('metricCompletionRate').innerText = `${completionRate}%`;
+            document.getElementById('metricProgressBar').style.width = `${completionRate}%`;
+            document.getElementById('metricCurrentStreak').innerText = `${maxStreak} Days`;
+            document.getElementById('metricTotalVotes').innerText = totalVotes;
+            document.getElementById('identityTextDisplay').innerText = state.identity;
+            document.getElementById('identityPrimaryDisplay').innerText = state.identity;
+        }
+
+        function handleAccountSetup() {
+            if (state.userEmail) {
+                if (confirm(`Disconnect active account (${state.userEmail})?`)) {
+                    state.userEmail = null;
+                    saveData();
+                }
+            } else {
+                const email = prompt("Enter your email address to sync your workspace:", "user@gmail.com");
+                if (email && email.includes('@')) {
+                    state.userEmail = email.trim();
+                    saveData();
+                }
+            }
+        }
+
+        // --- RENDERERS ---
+
+        function renderGoogleAccountStatus() {
+            const statusText = document.getElementById('userAccountStatusText');
+            const btnText = document.getElementById('signInBtnText');
+            const btn = document.getElementById('googleSignInBtn');
+
+            if (state.userEmail) {
+                statusText.innerHTML = `<span class="text-emerald-600 dark:text-emerald-400 font-semibold"><i class="fa-solid fa-circle-check"></i> Connected as: ${state.userEmail}</span>`;
+                btnText.innerText = "Disconnect Account";
+                btn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                btn.classList.add('bg-slate-700', 'hover:bg-slate-800');
+            } else {
+                statusText.innerText = "Manage your schedule and tasks below to turn them into Atomic Habits.";
+                btnText.innerText = "Set Active Account / Email";
+                btn.classList.remove('bg-slate-700', 'hover:bg-slate-800');
+                btn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+            }
+        }
+
+        // Render Calendar Events
+        function renderGoogleEvents() {
+            const container = document.getElementById('calendarEventsContainer');
+            const badge = document.getElementById('calendarCountBadge');
+            container.innerHTML = '';
+
+            badge.innerText = `${state.googleEvents.length} Events`;
+
+            if (state.googleEvents.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 italic">No events found. Add your schedule above or click 'Load Sample Schedule'!</p>`;
+                return;
+            }
+
+            state.googleEvents.forEach((evt, idx) => {
+                const div = document.createElement('div');
+                div.className = 'p-3 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs';
+                div.innerHTML = `
+                    <div class="space-y-1">
+                        <div class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                            <span>${evt.summary}</span>
+                            <span class="text-[10px] font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded-md">${evt.start}</span>
+                        </div>
+                        <p class="text-slate-500 text-[11px]"><i class="fa-solid fa-location-dot text-slate-400"></i> ${evt.location || 'No location set'}</p>
+                    </div>
+                    <div class="flex items-center gap-2 self-end sm:self-auto">
+                        <button onclick="convertItemToHabit('${evt.summary.replace(/'/g, "\\'")}', '${evt.start}', '${(evt.location || 'Home Desk').replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold rounded-lg transition whitespace-nowrap flex items-center gap-1 shadow">
+                            <i class="fa-solid fa-plus"></i> Turn into Habit
+                        </button>
+                        <button onclick="deleteCalendarEvent(${idx})" class="text-slate-400 hover:text-rose-500 text-xs p-1">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Render Tasks
+        function renderGoogleTasks() {
+            const container = document.getElementById('googleTasksContainer');
+            const badge = document.getElementById('tasksCountBadge');
+            container.innerHTML = '';
+
+            badge.innerText = `${state.googleTasks.length} Tasks`;
+
+            if (state.googleTasks.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 italic">No tasks found. Add a task above!</p>`;
+                return;
+            }
+
+            state.googleTasks.forEach((t) => {
+                const isDone = t.status === 'completed';
+                const div = document.createElement('div');
+                div.className = `p-2.5 rounded-xl border flex items-center justify-between text-xs transition ${
+                    isDone ? 'border-emerald-500/30 bg-emerald-50/20 dark:bg-emerald-950/20 text-slate-400 line-through' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200'
+                }`;
+                div.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <button onclick="toggleGoogleTask('${t.id}')" class="text-sm ${isDone ? 'text-emerald-500' : 'text-slate-400'}">
+                            <i class="fa-solid ${isDone ? 'fa-square-check' : 'fa-square'}"></i>
+                        </button>
+                        <span>${t.title}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="convertItemToHabit('${t.title.replace(/'/g, "\\'")}', 'Daily', 'My Desk')" class="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold rounded-lg transition whitespace-nowrap">
+                            + Habit
+                        </button>
+                        <button onclick="deleteGoogleTask('${t.id}')" class="text-slate-400 hover:text-rose-500 text-xs p-1">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function convertItemToHabit(title, timeCue, location) {
+            document.getElementById('habitForm').reset();
+            document.getElementById('habitId').value = '';
+            document.getElementById('habitTitle').value = title;
+            document.getElementById('habitTime').value = timeCue || 'Daily';
+            document.getElementById('habitLocation').value = location || 'Desk';
+            document.getElementById('habitTwoMin').value = `Spend 2 minutes starting: ${title}`;
+            document.getElementById('habitIdentity').value = 'An organized, intentional person';
+
+            document.getElementById('modalTitle').innerText = 'Create Habit from Schedule/Task';
+            document.getElementById('habitModal').classList.remove('hidden');
+        }
+
+        function toggleGoogleTask(id) {
+            const task = state.googleTasks.find(t => t.id === id);
+            if (task) {
+                task.status = task.status === 'completed' ? 'needsAction' : 'completed';
+                if (task.status === 'completed') playSuccessSound();
+                saveData();
+            }
+        }
+
+        function deleteGoogleTask(id) {
+            state.googleTasks = state.googleTasks.filter(t => t.id !== id);
+            saveData();
+        }
+
+        function deleteCalendarEvent(index) {
+            state.googleEvents.splice(index, 1);
+            saveData();
+        }
+
+        // Render Habits Cards
+        function renderHabits() {
+            const container = document.getElementById('habitsListContainer');
+            const emptyState = document.getElementById('emptyHabitsState');
+            const today = getTodayString();
+
+            container.innerHTML = '';
+
+            if (state.habits.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            state.habits.forEach(habit => {
+                const isCompleted = habit.completedDates.includes(today);
+
+                const card = document.createElement('div');
+                card.className = `bg-white dark:bg-slate-800 rounded-2xl p-5 border transition-all duration-200 shadow-sm flex flex-col justify-between ${
+                    isCompleted ? 'border-emerald-500/50 bg-emerald-50/20 dark:bg-emerald-950/10' : 'border-slate-200 dark:border-slate-700/60 hover:border-emerald-300'
+                }`;
+
+                card.innerHTML = `
+                    <div class="space-y-3">
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                                    Identity: ${habit.identity || 'General Habit'}
+                                </span>
+                                <h4 class="font-bold text-base text-slate-900 dark:text-slate-100 mt-1">${habit.title}</h4>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <button onclick="editHabit('${habit.id}')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 text-xs">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button onclick="deleteHabit('${habit.id}')" class="text-slate-400 hover:text-rose-500 p-1 text-xs">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Cues & Implementation Intentions -->
+                        <div class="space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-regular fa-clock text-emerald-500 w-4"></i>
+                                <span><strong>When:</strong> ${habit.time}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-location-dot text-emerald-500 w-4"></i>
+                                <span><strong>Where:</strong> ${habit.location}</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/30 p-2 rounded-lg text-amber-800 dark:text-amber-300">
+                                <i class="fa-solid fa-bolt text-amber-500 w-4"></i>
+                                <span><strong>2-Min Rule:</strong> ${habit.twoMin}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions & Streak Footer -->
+                    <div class="pt-4 mt-4 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+                        <div class="flex items-center gap-1.5 text-xs font-bold text-amber-500">
+                            <i class="fa-solid fa-fire"></i>
+                            <span>${habit.streak || 0}d Streak</span>
+                        </div>
+
+                        <button onclick="toggleHabitComplete('${habit.id}')" class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+                            isCompleted 
+                            ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20' 
+                            : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 hover:text-emerald-600'
+                        }">
+                            <i class="fa-solid ${isCompleted ? 'fa-check-circle' : 'fa-circle'}"></i>
+                            <span>${isCompleted ? 'Done Today' : 'Mark Done'}</span>
+                        </button>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        // Render Habit Stacks
+        function renderStacks() {
+            const container = document.getElementById('stackListContainer');
+            container.innerHTML = '';
+
+            if (state.stacks.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 italic">No habit stacks created yet. Use the builder above to stack routines!</p>`;
+                return;
+            }
+
+            state.stacks.forEach((stack, idx) => {
+                const div = document.createElement('div');
+                div.className = 'p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 flex justify-between items-center text-xs';
+                div.innerHTML = `
+                    <div class="space-y-1">
+                        <div class="font-semibold text-slate-800 dark:text-slate-200">
+                            After I <span class="text-emerald-600 dark:text-emerald-400 font-bold">${stack.anchor}</span>, I will <span class="text-emerald-600 dark:text-emerald-400 font-bold">${stack.action}</span>.
+                        </div>
+                        <div class="text-slate-400 text-[11px] flex gap-3">
+                            <span><i class="fa-solid fa-location-dot"></i> ${stack.location || 'Anywhere'}</span>
+                            ${stack.reward ? `<span><i class="fa-solid fa-gift"></i> Reward: ${stack.reward}</span>` : ''}
+                        </div>
+                    </div>
+                    <button onclick="deleteStack(${idx})" class="text-slate-400 hover:text-rose-500 p-2">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Render 2-Min Starters
+        function renderStarters() {
+            const container = document.getElementById('startersListContainer');
+            container.innerHTML = '';
+
+            if (state.starters.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 italic">No starters configured. Deconstruct big intimidated goals into 2-minute gateway steps.</p>`;
+                return;
+            }
+
+            state.starters.forEach((item, idx) => {
+                const div = document.createElement('div');
+                div.className = 'p-3 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/30 rounded-xl flex justify-between items-center text-xs';
+                div.innerHTML = `
+                    <div>
+                        <div class="font-bold text-amber-900 dark:text-amber-200">${item.starter}</div>
+                        <div class="text-[11px] text-amber-700/70 dark:text-amber-400/70">Big Goal: ${item.goal}</div>
+                    </div>
+                    <button onclick="deleteStarter(${idx})" class="text-slate-400 hover:text-rose-500 p-1.5">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Render Reflections
+        function renderReflections() {
+            const container = document.getElementById('reflectionLogsContainer');
+            container.innerHTML = '';
+
+            if (state.reflections.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 italic">No daily reflections saved yet. End your day with a quick review above!</p>`;
+                return;
+            }
+
+            state.reflections.slice().reverse().forEach(ref => {
+                const div = document.createElement('div');
+                div.className = 'p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs space-y-1';
+                div.innerHTML = `
+                    <div class="flex justify-between items-center text-[10px] text-slate-400 font-semibold">
+                        <span>${ref.date}</span>
+                        <span class="text-purple-500"><i class="fa-solid fa-vote-yea"></i> ${ref.vote}</span>
+                    </div>
+                    <p class="text-slate-700 dark:text-slate-300"><strong>Win:</strong> ${ref.win}</p>
+                    <p class="text-slate-500 dark:text-slate-400"><strong>Friction fix:</strong> ${ref.friction}</p>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Global Render Trigger
+        function renderAll() {
+            calculateMetrics();
+            renderHabits();
+            renderStacks();
+            renderStarters();
+            renderReflections();
+            renderGoogleAccountStatus();
+            renderGoogleEvents();
+            renderGoogleTasks();
+            updateReminders();
+        }
+
+        // Dynamic Gentle Reminders Generator
+        function updateReminders() {
+            const reminderContent = document.getElementById('reminderContent');
+            const reminderBadge = document.getElementById('reminderBadge');
+            const today = getTodayString();
+
+            const pending = state.habits.filter(h => !h.completedDates.includes(today));
+
+            if (pending.length > 0) {
+                reminderBadge.classList.remove('hidden');
+                reminderContent.innerHTML = `
+                    <p class="font-semibold text-slate-800 dark:text-slate-200">You have ${pending.length} habit(s) left today:</p>
+                    <ul class="list-disc pl-4 space-y-1 text-[11px]">
+                        ${pending.map(p => `<li><strong>${p.title}</strong> - ${p.twoMin}</li>`).join('')}
+                    </ul>
+                    <p class="text-[10px] text-slate-400 mt-1">Remember the 2-Minute Rule: Just start!</p>
+                `;
+            } else {
+                reminderBadge.classList.add('hidden');
+                reminderContent.innerHTML = `<p class="text-emerald-600 dark:text-emerald-400 font-semibold">🎉 All habits completed for today! Awesome identity building!</p>`;
+            }
+        }
+
+        // --- HABIT MUTATIONS ---
+
+        function toggleHabitComplete(id) {
+            const today = getTodayString();
+            const habit = state.habits.find(h => h.id === id);
+
+            if (habit) {
+                const index = habit.completedDates.indexOf(today);
+                if (index > -1) {
+                    habit.completedDates.splice(index, 1);
+                    if (habit.streak > 0) habit.streak--;
+                } else {
+                    habit.completedDates.push(today);
+                    habit.streak = (habit.streak || 0) + 1;
+                    playSuccessSound();
+                }
+                saveData();
+            }
+        }
+
+        function deleteHabit(id) {
+            if (confirm("Are you sure you want to delete this atomic habit?")) {
+                state.habits = state.habits.filter(h => h.id !== id);
+                saveData();
+            }
+        }
+
+        function editHabit(id) {
+            const habit = state.habits.find(h => h.id === id);
+            if (!habit) return;
+
+            document.getElementById('habitId').value = habit.id;
+            document.getElementById('habitTitle').value = habit.title;
+            document.getElementById('habitTime').value = habit.time;
+            document.getElementById('habitLocation').value = habit.location;
+            document.getElementById('habitTwoMin').value = habit.twoMin;
+            document.getElementById('habitReward').value = habit.reward || '';
+            document.getElementById('habitIdentity').value = habit.identity || '';
+
+            document.getElementById('modalTitle').innerText = 'Edit Atomic Habit';
+            document.getElementById('habitModal').classList.remove('hidden');
+        }
+
+        function deleteStack(idx) {
+            state.stacks.splice(idx, 1);
+            saveData();
+        }
+
+        function deleteStarter(idx) {
+            state.starters.splice(idx, 1);
+            saveData();
+        }
+
+        // --- EVENT HANDLERS ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set reflection date tag
+            document.getElementById('reflectionDateTag').innerText = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+            // Account & Setup Handlers
+            document.getElementById('googleSignInBtn').addEventListener('click', handleAccountSetup);
+
+            // Export Data File Handler (For Google Sites Persistence)
+            document.getElementById('exportDataBtn').addEventListener('click', () => {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.setAttribute("href", dataStr);
+                downloadAnchor.setAttribute("download", `atomic_daily_backup_${getTodayString()}.json`);
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                downloadAnchor.remove();
+            });
+
+            // Import Data File Handler
+            document.getElementById('importFileInput').addEventListener('change', (e) => {
+                const fileReader = new FileReader();
+                if (e.target.files && e.target.files[0]) {
+                    fileReader.readAsText(e.target.files[0], "UTF-8");
+                    fileReader.onload = (event) => {
+                        try {
+                            const parsedData = JSON.parse(event.target.result);
+                            if (parsedData.habits) {
+                                state = { ...state, ...parsedData };
+                                saveData();
+                                alert("Data successfully restored from backup!");
+                            }
+                        } catch (err) {
+                            alert("Invalid JSON file format.");
+                        }
+                    };
+                }
+            });
+
+            // Sample Data Loader
+            document.getElementById('useDemoModeBtn').addEventListener('click', () => {
+                state.googleEvents = DEMO_EVENTS;
+                state.googleTasks = DEMO_TASKS;
+                saveData();
+            });
+
+            // Add Calendar Event Form
+            document.getElementById('addCalendarEventForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const summary = document.getElementById('newEventSummary').value.trim();
+                const start = document.getElementById('newEventTime').value.trim();
+                if (summary && start) {
+                    state.googleEvents.push({
+                        id: 'e_' + Date.now(),
+                        summary,
+                        start,
+                        location: 'Home Desk',
+                        description: ''
+                    });
+                    document.getElementById('newEventSummary').value = '';
+                    document.getElementById('newEventTime').value = '';
+                    saveData();
+                }
+            });
+
+            // Add Google Task Form
+            document.getElementById('addGoogleTaskForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const input = document.getElementById('newGoogleTaskTitle');
+                if (input.value.trim()) {
+                    state.googleTasks.push({
+                        id: Date.now().toString(),
+                        title: input.value.trim(),
+                        status: 'needsAction'
+                    });
+                    input.value = '';
+                    saveData();
+                }
+            });
+
+            // Tab Switching Handler
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.tab-btn').forEach(b => {
+                        b.classList.remove('border-emerald-500', 'text-emerald-600', 'dark:text-emerald-400', 'font-semibold');
+                        b.classList.add('border-transparent', 'text-slate-500');
+                    });
+                    btn.classList.add('border-emerald-500', 'text-emerald-600', 'dark:text-emerald-400', 'font-semibold');
+                    btn.classList.remove('border-transparent', 'text-slate-500');
+
+                    const tabId = btn.getAttribute('data-tab');
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.add('hidden');
+                    });
+                    document.getElementById(tabId).classList.remove('hidden');
+                });
+            });
+
+            // Modal Controls
+            const modal = document.getElementById('habitModal');
+            document.getElementById('openAddHabitModalBtn').addEventListener('click', () => {
+                document.getElementById('habitForm').reset();
+                document.getElementById('habitId').value = '';
+                document.getElementById('modalTitle').innerText = 'Create Atomic Habit';
+                modal.classList.remove('hidden');
+            });
+
+            const closeModal = () => modal.classList.add('hidden');
+            document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+            document.getElementById('cancelModalBtn').addEventListener('click', closeModal);
+
+            // Save Habit Form
+            document.getElementById('habitForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const id = document.getElementById('habitId').value;
+                const title = document.getElementById('habitTitle').value;
+                const time = document.getElementById('habitTime').value;
+                const location = document.getElementById('habitLocation').value;
+                const twoMin = document.getElementById('habitTwoMin').value;
+                const reward = document.getElementById('habitReward').value;
+                const identity = document.getElementById('habitIdentity').value;
+
+                if (id) {
+                    const habit = state.habits.find(h => h.id === id);
+                    if (habit) {
+                        habit.title = title;
+                        habit.time = time;
+                        habit.location = location;
+                        habit.twoMin = twoMin;
+                        habit.reward = reward;
+                        habit.identity = identity;
+                    }
+                } else {
+                    const newHabit = {
+                        id: Date.now().toString(),
+                        title,
+                        time,
+                        location,
+                        twoMin,
+                        reward,
+                        identity,
+                        completedDates: [],
+                        streak: 0
+                    };
+                    state.habits.push(newHabit);
+                }
+
+                saveData();
+                closeModal();
+            });
+
+            // Save Habit Stack
+            document.getElementById('stackForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const anchor = document.getElementById('stackAnchor').value;
+                const action = document.getElementById('stackNewAction').value;
+                const location = document.getElementById('stackLocation').value;
+                const reward = document.getElementById('stackReward').value;
+
+                state.stacks.push({ anchor, action, location, reward });
+                saveData();
+                e.target.reset();
+            });
+
+            // Add Deconstructed Gateway Starter
+            document.getElementById('addDeconstructedBtn').addEventListener('click', () => {
+                const goal = document.getElementById('deconstructBigGoal').value;
+                const starter = document.getElementById('deconstructStarter').value;
+
+                if (goal && starter) {
+                    state.starters.push({ goal, starter });
+                    saveData();
+                    document.getElementById('deconstructBigGoal').value = '';
+                    document.getElementById('deconstructStarter').value = '';
+                }
+            });
+
+            // Identity Form
+            document.getElementById('identityForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const val = document.getElementById('identityInput').value;
+                if (val) {
+                    state.identity = val;
+                    saveData();
+                    document.getElementById('identityInput').value = '';
+                }
+            });
+
+            // Daily Reflection Form
+            document.getElementById('reflectionForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const win = document.getElementById('refWin').value;
+                const friction = document.getElementById('refFriction').value;
+                const vote = document.getElementById('refVote').value;
+
+                if (win || friction || vote) {
+                    state.reflections.push({
+                        date: new Date().toLocaleDateString(),
+                        win: win || 'N/A',
+                        friction: friction || 'N/A',
+                        vote: vote || '1 vote for target identity'
+                    });
+                    saveData();
+                    e.target.reset();
+                }
+            });
+
+            // Theme Toggle
+            document.getElementById('toggleThemeBtn').addEventListener('click', () => {
+                document.documentElement.classList.toggle('dark');
+            });
+
+            // Reminder Drawer Toggle
+            const reminderDrawer = document.getElementById('reminderDrawer');
+            document.getElementById('reminderAlertBtn').addEventListener('click', () => {
+                reminderDrawer.classList.toggle('hidden');
+            });
+            document.getElementById('closeReminderBtn').addEventListener('click', () => {
+                reminderDrawer.classList.add('hidden');
+            });
+
+            // Quick Check-In Action
+            document.getElementById('quickLogBtn').addEventListener('click', () => {
+                const today = getTodayString();
+                const uncompleted = state.habits.find(h => !h.completedDates.includes(today));
+                if (uncompleted) {
+                    toggleHabitComplete(uncompleted.id);
+                } else {
+                    alert("All habits checked off for today!");
+                }
+            });
+
+            // Initial Render Call
+            renderAll();
+        });
+    </script>
+</body>
+</html>
